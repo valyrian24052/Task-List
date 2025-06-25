@@ -276,6 +276,15 @@ export default function TaskBoard() {
     }
   }
 
+  /**
+   * Clears all tasks from all columns.
+   */
+  const handleClearAllTasks = () => {
+    if (tasks.length > 0 && window.confirm("Are you sure you want to clear all tasks? This action cannot be undone.")) {
+      setTasks([])
+    }
+  }
+
   // Effect hook to handle global dragover event for the trash bin
   useEffect(() => {
     const handleGlobalDragOver = (e: DragEvent) => {
@@ -358,6 +367,13 @@ export default function TaskBoard() {
           >
             <i className="fas fa-plus mr-2"></i>
             Add Task
+          </button>
+          <button
+            onClick={handleClearAllTasks}
+            className="bg-red-600 bg-opacity-30 hover:bg-opacity-50 text-white px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <i className="fas fa-trash-alt mr-2"></i>
+            Clear All
           </button>
         </div>
       </header>
