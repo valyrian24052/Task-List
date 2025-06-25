@@ -17,6 +17,8 @@ export default function TaskBoard() {
   const [newTask, setNewTask] = useState("")
   // State for the priority of the new task, defaulting to 'H' (High)
   const [newTaskPriority, setNewTaskPriority] = useState<"H" | "M" | "L">("H")
+  // State to track if we've loaded tasks from localStorage
+  const [isLoaded, setIsLoaded] = useState(false)
 
   // Array of darker, muted pastel colors for task cards, chosen to match the image's aesthetic
   const pastelColors = [
@@ -44,72 +46,75 @@ export default function TaskBoard() {
     L: "bg-green-400", // Softer green
   }
 
-  // Initial state for tasks, pre-populated with example tasks
-  const [tasks, setTasks] = useState<Task[]>([
+  // Default tasks for initial setup
+  const getDefaultTasks = (): Task[] => [
     {
       id: "1",
       content: "Complete project documentation",
       column: "todo",
       color: getRandomPastelColor(),
-      priority: "H", // Default priority for initial tasks
+      priority: "H",
     },
     {
       id: "2",
       content: "Review team pull requests",
       column: "inProgress",
       color: getRandomPastelColor(),
-      priority: "M", // Default priority for initial tasks
+      priority: "M",
     },
     {
       id: "3",
       content: "Set up weekly team meeting",
       column: "todo",
       color: getRandomPastelColor(),
-      priority: "L", // Default priority for initial tasks
+      priority: "L",
     },
     {
       id: "4",
       content: "Research new technologies",
       column: "completed",
       color: getRandomPastelColor(),
-      priority: "H", // Default priority for initial tasks
+      priority: "H",
     },
     {
       id: "5",
       content: "Fix navigation bug",
       column: "inProgress",
       color: getRandomPastelColor(),
-      priority: "M", // Default priority for initial tasks
+      priority: "M",
     },
     {
       id: "6",
       content: "Update user dashboard",
       column: "completed",
       color: getRandomPastelColor(),
-      priority: "L", // Default priority for initial tasks
+      priority: "L",
     },
     {
       id: "7",
       content: "Implement dark mode",
       column: "completed",
       color: getRandomPastelColor(),
-      priority: "H", // Default priority for initial tasks
+      priority: "H",
     },
     {
       id: "8",
       content: "Optimize loading speed",
       column: "todo",
       color: getRandomPastelColor(),
-      priority: "M", // Default priority for initial tasks
+      priority: "M",
     },
     {
       id: "9",
       content: "Create onboarding flow",
       column: "inProgress",
       color: getRandomPastelColor(),
-      priority: "L", // Default priority for initial tasks
+      priority: "L",
     },
-  ])
+  ]
+
+  // Initial state for tasks - will be populated from localStorage or defaults
+  const [tasks, setTasks] = useState<Task[]>([])
 
   // State to track the ID of the task currently being dragged
   const [dragging, setDragging] = useState<string | null>(null)
@@ -120,6 +125,57 @@ export default function TaskBoard() {
   const dragItem = useRef<string | null>(null) // Stores the ID of the dragged item
   const dragNode = useRef<EventTarget | null>(null) // Stores the DOM node of the dragged item
   const binRef = useRef<HTMLDivElement>(null) // Ref for the trash bin element
+
+  // LocalStorage key for tasks
+  const TASKS_STORAGE_KEY = "taskboard-tasks"
+
+  /**
+   * Load tasks from localStorage
+   */
+  const loadTasksFromStorage = (): Task[] => {
+    try {
+      if (typeof window !== "undefined") {
+        const storedTasks = localStorage.getItem(TASKS_STORAGE_KEY)
+        if (storedTasks) {
+          return JSON.parse(storedTasks)
+        }
+      }
+    } catch (error) {
+      console.error("Error loading tasks from localStorage:", error)
+    }
+    return getDefaultTasks()
+  }
+
+  /**
+   * Save tasks to localStorage
+   */
+  const saveTasksToStorage = (tasksToSave: Task[]) => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasksToSave))
+      }
+    } catch (error) {
+      console.error("Error saving tasks to localStorage:", error)
+    }
+  }
+
+  /**
+   * Load tasks from localStorage on component mount
+   */
+  useEffect(() => {
+    const loadedTasks = loadTasksFromStorage()
+    setTasks(loadedTasks)
+    setIsLoaded(true)
+  }, [])
+
+  /**
+   * Save tasks to localStorage whenever tasks change (but not on initial load)
+   */
+  useEffect(() => {
+    if (isLoaded) {
+      saveTasksToStorage(tasks)
+    }
+  }, [tasks, isLoaded])
 
   /**
    * Handles the start of a drag operation.
@@ -285,6 +341,15 @@ export default function TaskBoard() {
     }
   }
 
+  /**
+   * Reset tasks to default examples
+   */
+  const handleResetToDefaults = () => {
+    if (window.confirm("Are you sure you want to reset to default tasks? This will replace all current tasks.")) {
+      setTasks(getDefaultTasks())
+    }
+  }
+
   // Effect hook to handle global dragover event for the trash bin
   useEffect(() => {
     const handleGlobalDragOver = (e: DragEvent) => {
@@ -325,6 +390,18 @@ export default function TaskBoard() {
     return tasks.filter((task) => task.column === column)
   }
 
+  // Show loading state until tasks are loaded from localStorage
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#85E3FF] mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading your tasks...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     // Main container with dark background and responsive flex layout
     <div className="min-h-screen bg-black text-white flex flex-col font-sans">
@@ -334,6 +411,10 @@ export default function TaskBoard() {
       {/* Header section */}
       <header className="py-6 text-center">
         <h1 className="text-4xl font-bold text-[#e2e8f0] drop-shadow-lg">Task List</h1>
+        <p className="text-sm text-gray-400 mt-2">
+          <i className="fas fa-save mr-1"></i>
+          Your tasks are automatically saved to your browser
+        </p>
         {/* Input and Add Task button */}
         <div className="mt-6 flex flex-col sm:flex-row justify-center items-center gap-3 px-4">
           <input
@@ -374,6 +455,13 @@ export default function TaskBoard() {
           >
             <i className="fas fa-trash-alt mr-2"></i>
             Clear All
+          </button>
+          <button
+            onClick={handleResetToDefaults}
+            className="bg-yellow-600 bg-opacity-30 hover:bg-opacity-50 text-white px-6 py-3 rounded-xl transition-all duration-300 flex items-center justify-center whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <i className="fas fa-undo mr-2"></i>
+            Reset
           </button>
         </div>
       </header>
